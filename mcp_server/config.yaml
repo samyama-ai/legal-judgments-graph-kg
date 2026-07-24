@@ -1,0 +1,9 @@
+# MCP server config for the Legal Judgments KG
+server:
+  name: legal-judgments-kg
+  description: Query the legal judgments knowledge graph
+graph:
+  # connection to the Samyama graph engine
+  host: 127.0.0.1
+  port: 8080
+  tenant: legal-judgments
