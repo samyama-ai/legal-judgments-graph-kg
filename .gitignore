@@ -6,3 +6,4 @@ data/
 site/
 .DS_Store
 .env
+.pytest_cache/
