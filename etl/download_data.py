@@ -15,6 +15,8 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -23,11 +25,22 @@ REVISION = "e928c72019d6"
 API = f"https://huggingface.co/api/datasets/{REPO}/tree/{REVISION}/extracted_jsons?recursive=1"
 RESOLVE = f"https://huggingface.co/datasets/{REPO}/resolve/{REVISION}"
 
+RETRIES = 3
+
 
 def _get(url: str) -> bytes:
+    """Fetch a URL, retrying with backoff on transient network/HTTP errors."""
     req = urllib.request.Request(url, headers={"User-Agent": "legal-judgments-graph-kg"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read()
+    last = None
+    for attempt in range(1, RETRIES + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return r.read()
+        except (urllib.error.URLError, TimeoutError) as e:
+            last = e
+            if attempt < RETRIES:
+                time.sleep(2 * attempt)
+    raise RuntimeError(f"failed to fetch {url} after {RETRIES} attempts: {last}")
 
 
 def download_all(out: str = "data") -> None:
@@ -38,12 +51,23 @@ def download_all(out: str = "data") -> None:
     tree = json.loads(_get(API))
     paths = [e["path"] for e in tree if e.get("path", "").endswith(".json")]
     print(f"[download] {len(paths)} judgment JSON files")
+    if not paths:
+        raise RuntimeError(
+            "no judgment JSON files found — the dataset layout or revision may have "
+            "changed. Check REPO/REVISION in etl/download_data.py."
+        )
 
     records = []
     for i, p in enumerate(paths, 1):
-        records.append(json.loads(_get(f"{RESOLVE}/{p}")))
+        try:
+            records.append(json.loads(_get(f"{RESOLVE}/{p}")))
+        except (RuntimeError, json.JSONDecodeError) as e:
+            print(f"[download]   WARN skipping {p}: {e}")
         if i % 50 == 0 or i == len(paths):
             print(f"[download]   {i}/{len(paths)}")
+
+    if not records:
+        raise RuntimeError("no records were downloaded — aborting without writing CSVs.")
 
     _write_csvs(records, out_dir)
     print(f"[download] wrote CSVs into {out_dir}/")
@@ -56,8 +80,12 @@ def _write_csvs(records: list[dict], out: Path) -> None:
     cases, summaries = [], []
     e_dec, e_par, e_cit, e_abo = [], [], [], []
 
+    skipped = 0
     for r in records:
         cid = r.get("filename") or r.get("doc_id")
+        if not cid:                       # can't wire edges without a stable case id
+            skipped += 1
+            continue
         ent = r.get("entities", {})
         md = r.get("metadata", {})
         ct = ent.get("case_title")
@@ -67,30 +95,37 @@ def _write_csvs(records: list[dict], out: Path) -> None:
         summary = sm.get("summary") if isinstance(sm, dict) else sm
         if summary:
             summaries.append([cid, summary])
+        # dedup edges *within a case* so the same judge/party/topic/section isn't
+        # wired to the same case twice.
+        seen_dec, seen_par, seen_cit, seen_abo = set(), set(), set(), set()
         for j in ent.get("judges", []):
             n = (j.get("name") or "").strip()
-            if n:
+            if n and n not in seen_dec:
+                seen_dec.add(n)
                 judges.add(n)
                 e_dec.append([n, cid])
         for p in ent.get("parties", []):
             n = (p.get("name") or "").strip()
-            if n:
+            role = p.get("role", "")
+            if n and (n, role) not in seen_par:
+                seen_par.add((n, role))
                 parties.add(n)
-                e_par.append([n, cid, p.get("role", "")])
-        seen = set()
+                e_par.append([n, cid, role])
         for s in ent.get("sections", []):
             a = (s.get("act") or "").strip()
             sec = str(s.get("section") or "").strip()
             if a:
                 acts.add(a)
-                if (a, sec) not in seen:
-                    seen.add((a, sec))
+                if (a, sec) not in seen_cit:
+                    seen_cit.add((a, sec))
                     e_cit.append([cid, a, sec])
         for t in ent.get("topics", []):
             tx = (t.get("text") or "").strip()
             if tx:
                 topics.setdefault(tx, (t.get("category") or "").strip())
-                e_abo.append([cid, tx])
+                if tx not in seen_abo:
+                    seen_abo.add(tx)
+                    e_abo.append([cid, tx])
 
     def w(name, header, rows):
         with (out / name).open("w", newline="", encoding="utf-8") as f:
@@ -110,6 +145,8 @@ def _write_csvs(records: list[dict], out: Path) -> None:
     w("summaries.csv", ["case_id", "summary"], summaries)
     print(f"[download] cases={len(cases)} judges={len(judges)} parties={len(parties)} "
           f"acts={len(acts)} topics={len(topics)} summaries={len(summaries)}")
+    if skipped:
+        print(f"[download] skipped {skipped} record(s) with no case id")
 
 
 def main(argv: list[str] | None = None) -> None:

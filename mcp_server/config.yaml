@@ -67,14 +67,16 @@ custom_tools:
     parameters: []
 
   - name: cases_by_judge
-    description: "All judgments authored by a specific judge."
+    description: "All judgments authored by a specific judge (most recent first)."
     cypher_template: >
       MATCH (j:Judge)-[:DECIDED]->(c:Case)
       WHERE j.name CONTAINS "{judge_name}"
       RETURN c.title AS case_title, c.year AS year, c.month AS month
-      ORDER BY c.month
+      ORDER BY c.year DESC, c.month DESC
+      LIMIT {limit}
     parameters:
       - {name: judge_name, type: str}
+      - {name: limit, type: int, default: 50}
 
   - name: cases_citing_section
     description: "Judgments that cite a specific section of a given act (e.g. section 302 of the Indian Penal Code)."
@@ -82,9 +84,11 @@ custom_tools:
       MATCH (c:Case)-[r:CITES]->(a:Act)
       WHERE a.name CONTAINS "{act}" AND r.section = "{section}"
       RETURN c.title AS case_title, a.name AS act, r.section AS section
+      LIMIT {limit}
     parameters:
       - {name: act, type: str}
       - {name: section, type: str}
+      - {name: limit, type: int, default: 50}
 
   - name: parties_in_case
     description: "The parties (with roles) involved in judgments matching a title fragment."
@@ -92,8 +96,10 @@ custom_tools:
       MATCH (p:Party)-[pi:PARTY_IN]->(c:Case)
       WHERE c.title CONTAINS "{title}"
       RETURN c.title AS case_title, p.name AS party, pi.role AS role
+      LIMIT {limit}
     parameters:
       - {name: title, type: str}
+      - {name: limit, type: int, default: 50}
 
   - name: judge_topic_focus
     description: "The topic categories a judge most often decides on — their subject-matter focus."
@@ -102,5 +108,7 @@ custom_tools:
       WHERE j.name CONTAINS "{judge_name}"
       RETURN t.category AS category, count(*) AS cases
       ORDER BY cases DESC
+      LIMIT {limit}
     parameters:
       - {name: judge_name, type: str}
+      - {name: limit, type: int, default: 20}

@@ -44,9 +44,6 @@ from samyama import SamyamaClient
 
 from etl.helpers import GRAPH, batch_create_nodes, batch_create_edges, read_csv, _q
 
-# Unique property used to MATCH each node label when wiring edges.
-NODE_KEY = {"Case": "id", "Judge": "name", "Party": "name", "Act": "name", "Topic": "text"}
-
 
 def _int(val):
     try:

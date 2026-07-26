@@ -91,24 +91,24 @@ pytest                               # run tests
 ## Example Queries
 
 ```cypher
--- Most productive judges
+// Most productive judges
 MATCH (j:Judge)-[:DECIDED]->(c:Case)
 RETURN j.name AS judge, count(DISTINCT c) AS cases
 ORDER BY cases DESC LIMIT 5
--- Dipak Misra (104), T. S. Thakur (81), A. K. Sikri (74), Rohinton F. Nariman (74), Kurian Joseph (68)
+// Dipak Misra (104), T. S. Thakur (81), A. K. Sikri (74), Rohinton F. Nariman (74), Kurian Joseph (68)
 
--- Judges who most often sit together
+// Judges who most often sit together
 MATCH (j1:Judge)-[:DECIDED]->(c:Case)<-[:DECIDED]-(j2:Judge)
 WHERE j1.name < j2.name
 RETURN j1.name, j2.name, count(DISTINCT c) AS cases_together
 ORDER BY cases_together DESC LIMIT 5
--- Kurian Joseph & Rohinton F. Nariman lead with 55
+// Kurian Joseph & Rohinton F. Nariman lead with 55
 
--- Laws spanning the widest range of topics (two-hop)
+// Laws spanning the widest range of topics (two-hop)
 MATCH (a:Act)<-[:CITES]-(c:Case)-[:ABOUT]->(t:Topic)
 RETURN a.name, count(DISTINCT t.category) AS topic_breadth, count(DISTINCT c) AS cases
 ORDER BY topic_breadth DESC LIMIT 5
--- Constitution of India — all 11 topic categories
+// Constitution of India — all 11 topic categories
 ```
 
 See the full **[100-query showcase](docs/100-queries.md)** — from single-table aggregations to network intelligence that SQL cannot express.

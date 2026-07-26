@@ -1,7 +1,8 @@
 """Run the README showcase queries against a loaded legal-judgments graph."""
 
+import os
 import sys
-sys.path.insert(0, ".")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
 from samyama import SamyamaClient
 from etl.loader import load_legal_judgments
 
@@ -33,7 +34,7 @@ def run_all(client):
         RETURN j.name AS judge, count(DISTINCT c) AS cases
         ORDER BY cases DESC LIMIT 5
     """):
-        print(f"  {r['judge']:24s} {r['cases']}")
+        print(f"  {str(r['judge']):24s} {r['cases']}")
 
     print("\n## Most-cited legal sections\n")
     for r in q(client, """
@@ -41,7 +42,7 @@ def run_all(client):
         RETURN a.name AS act, rel.section AS section, count(DISTINCT c) AS cases
         ORDER BY cases DESC LIMIT 5
     """):
-        print(f"  {r['act']} §{r['section']}: {r['cases']}")
+        print(f"  {str(r['act'])} §{r['section'] or '?'}: {r['cases']}")
 
     print("\n## Judges who most often sit together\n")
     for r in q(client, """
@@ -50,7 +51,7 @@ def run_all(client):
         RETURN j1.name AS a, j2.name AS b, count(DISTINCT c) AS together
         ORDER BY together DESC LIMIT 5
     """):
-        print(f"  {r['a']} & {r['b']}: {r['together']}")
+        print(f"  {str(r['a'])} & {str(r['b'])}: {r['together']}")
 
     print("\n## Laws spanning the widest range of topics\n")
     for r in q(client, """
@@ -58,7 +59,7 @@ def run_all(client):
         RETURN a.name AS act, count(DISTINCT t.category) AS breadth, count(DISTINCT c) AS cases
         ORDER BY breadth DESC, cases DESC LIMIT 5
     """):
-        print(f"  {r['act']}: {r['breadth']} categories / {r['cases']} cases")
+        print(f"  {str(r['act'])}: {r['breadth']} categories / {r['cases']} cases")
 
 
 if __name__ == "__main__":

@@ -16,9 +16,20 @@ BATCH_SIZE = 300
 # Cypher value escaping + property serialization
 # ---------------------------------------------------------------------------
 def _escape(value) -> str:
+    """Make a value safe inside a double-quoted Cypher string literal.
+
+    Drops backslashes and double quotes (a trailing '\\' or an embedded '"' would
+    otherwise break the literal) and collapses newlines to spaces.
+    """
     if value is None:
         return ""
-    return str(value).replace('"', "").replace("\n", " ").replace("\r", "")
+    return (
+        str(value)
+        .replace("\\", "")
+        .replace('"', "")
+        .replace("\n", " ")
+        .replace("\r", "")
+    )
 
 
 def _q(val) -> str:
