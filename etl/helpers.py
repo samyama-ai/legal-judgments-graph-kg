@@ -6,6 +6,7 @@ mechanics as the football-kg loader, factored out so `loader.py` stays readable.
 from __future__ import annotations
 
 import csv
+import math
 from pathlib import Path
 
 GRAPH = "legal-judgments"   # Samyama tenant / graph name
@@ -45,6 +46,8 @@ def prop_str(props: dict) -> str:
         if isinstance(val, bool):
             parts.append(f"{key}: {'true' if val else 'false'}")
         elif isinstance(val, (int, float)):
+            if isinstance(val, float) and not math.isfinite(val):
+                continue  # NaN/inf are not valid Cypher numeric literals — skip the prop
             parts.append(f"{key}: {val}")
         else:
             parts.append(f"{key}: {_q(val)}")

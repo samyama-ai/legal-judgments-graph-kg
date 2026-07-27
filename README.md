@@ -67,9 +67,12 @@ pip install -e ".[dev]"
 
 python -m etl.download_data          # fetch 589 JSONs from HuggingFace -> 9 CSVs in ./data
 python -m etl.loader --data-dir data # build + load the graph (4,462 nodes / 8,363 edges)
-python -m etl.loader --data-dir data --embed   # ...also embed case summaries for semantic search
 python -m mcp_server.server --data-dir data    # expose the KG over MCP
 pytest                               # run tests
+
+# Optional: semantic-search embeddings (installs torch via the [embed] extra)
+pip install -e ".[embed]"
+python -m etl.loader --data-dir data --embed   # ...also embed case summaries for vector search
 ```
 
 ### Load from snapshot (coming soon)

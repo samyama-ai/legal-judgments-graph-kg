@@ -55,6 +55,14 @@ def test_load_legal_judgments_embedded():
         client = SamyamaClient.embedded()
         counts = load_legal_judgments(client, data_dir=d)
 
+        # Verify the data actually persisted in the graph — query real state, not just
+        # the counts the loader returned.
+        from etl.helpers import GRAPH
+        nodes = client.query_readonly("MATCH (n) RETURN count(n) AS c", GRAPH).records[0][0]
+        edges = client.query_readonly("MATCH ()-[r]->() RETURN count(r) AS c", GRAPH).records[0][0]
+        assert nodes == counts["nodes"], f"graph has {nodes} nodes, reported {counts['nodes']}"
+        assert edges == counts["edges"], f"graph has {edges} edges, reported {counts['edges']}"
+
     assert counts["cases"] == 2
     assert counts["judges"] == 2
     assert counts["DECIDED"] == 3

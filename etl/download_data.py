@@ -26,6 +26,7 @@ API = f"https://huggingface.co/api/datasets/{REPO}/tree/{REVISION}/extracted_jso
 RESOLVE = f"https://huggingface.co/datasets/{REPO}/resolve/{REVISION}"
 
 RETRIES = 3
+EXPECTED_FILES = 589   # judgment JSONs at this pinned REVISION; a mismatch flags truncation
 
 
 def _get(url: str) -> bytes:
@@ -66,6 +67,12 @@ def download_all(out: str = "data") -> None:
         raise RuntimeError(
             "no judgment JSON files found — the dataset layout or revision may have "
             "changed. Check REPO/REVISION in etl/download_data.py."
+        )
+    if len(paths) != EXPECTED_FILES:
+        print(
+            f"[download]   WARN listed {len(paths)} files but expected {EXPECTED_FILES} "
+            f"at revision {REVISION} — the tree API may be truncated/paginated, or the "
+            f"dataset changed. Counts below may not match the documented totals."
         )
 
     records = []
@@ -140,9 +147,13 @@ def _write_csvs(records: list[dict], out: Path) -> None:
 
     def _safe(cell):
         # Neutralize CSV formula injection: a leading =,+,-,@ (or tab/CR) can execute
-        # in spreadsheet apps. Prefix such text cells with a single quote.
+        # in spreadsheet apps. Prefix such *text* cells with a single quote — but leave
+        # legitimate numbers (e.g. "-5", "+3") untouched.
         if isinstance(cell, str) and cell[:1] in ("=", "+", "-", "@", "\t", "\r"):
-            return "'" + cell
+            try:
+                float(cell)
+            except ValueError:
+                return "'" + cell
         return cell
 
     def w(name, header, rows):
