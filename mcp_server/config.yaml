@@ -1,9 +1,116 @@
-# MCP server config for the Legal Judgments KG
-server:
-  name: legal-judgments-kg
-  description: Query the legal judgments knowledge graph
-graph:
-  # connection to the Samyama graph engine
-  host: 127.0.0.1
-  port: 8080
-  tenant: legal-judgments
+# Legal Judgments KG — custom MCP tools for samyama-mcp-serve
+#
+# Auto-generated tools handle: search/get/count per label (5),
+# find_connections/traverse per edge type (4), algorithms, vector search, generic.
+# These custom tools add legal-analytics queries a researcher would actually ask.
+
+include_node_tools: true
+include_edge_tools: true
+include_vector_tools: true
+include_algorithm_tools: true
+
+custom_tools:
+
+  - name: top_judges
+    description: "Judges who authored the most judgments. Returns judge name and case count."
+    cypher_template: >
+      MATCH (j:Judge)-[:DECIDED]->(c:Case)
+      RETURN j.name AS judge, count(DISTINCT c) AS cases
+      ORDER BY cases DESC LIMIT {limit}
+    parameters:
+      - {name: limit, type: int, default: 10}
+
+  - name: most_cited_sections
+    description: "The most frequently cited legal sections across judgments (e.g. IPC 302). Returns act, section, and how many judgments cite it."
+    cypher_template: >
+      MATCH (c:Case)-[r:CITES]->(a:Act)
+      RETURN a.name AS act, r.section AS section, count(DISTINCT c) AS cases
+      ORDER BY cases DESC LIMIT {limit}
+    parameters:
+      - {name: limit, type: int, default: 10}
+
+  - name: co_sitting_judges
+    description: "Which judges most often sit together on the same bench. Returns the judge pair and how many cases they decided together."
+    cypher_template: >
+      MATCH (j1:Judge)-[:DECIDED]->(c:Case)<-[:DECIDED]-(j2:Judge)
+      WHERE j1.name < j2.name
+      RETURN j1.name AS judge_a, j2.name AS judge_b, count(DISTINCT c) AS cases_together
+      ORDER BY cases_together DESC LIMIT {limit}
+    parameters:
+      - {name: limit, type: int, default: 10}
+
+  - name: laws_cited_together
+    description: "Which acts are most often cited together in the same judgment."
+    cypher_template: >
+      MATCH (a1:Act)<-[:CITES]-(c:Case)-[:CITES]->(a2:Act)
+      WHERE a1.name < a2.name
+      RETURN a1.name AS act_a, a2.name AS act_b, count(DISTINCT c) AS cited_together
+      ORDER BY cited_together DESC LIMIT {limit}
+    parameters:
+      - {name: limit, type: int, default: 10}
+
+  - name: laws_by_topic_breadth
+    description: "Acts that span the widest range of topic categories — the most foundational statutes. Two-hop traversal Act <- Case -> Topic."
+    cypher_template: >
+      MATCH (a:Act)<-[:CITES]-(c:Case)-[:ABOUT]->(t:Topic)
+      RETURN a.name AS act, count(DISTINCT t.category) AS topic_breadth, count(DISTINCT c) AS cases
+      ORDER BY topic_breadth DESC, cases DESC LIMIT {limit}
+    parameters:
+      - {name: limit, type: int, default: 10}
+
+  - name: docket_by_category
+    description: "The Court's docket broken down by topic category — where the judgments concentrate."
+    cypher_template: >
+      MATCH (c:Case)-[:ABOUT]->(t:Topic)
+      RETURN t.category AS category, count(DISTINCT c) AS cases, count(*) AS mentions
+      ORDER BY cases DESC
+      LIMIT {limit}
+    parameters:
+      - {name: limit, type: int, default: 20}
+
+  - name: cases_by_judge
+    description: "All judgments authored by a specific judge (most recent first)."
+    cypher_template: >
+      MATCH (j:Judge)-[:DECIDED]->(c:Case)
+      WHERE j.name CONTAINS "{judge_name}"
+      RETURN c.title AS case_title, c.year AS year, c.month AS month
+      ORDER BY c.year DESC, c.month DESC
+      LIMIT {limit}
+    parameters:
+      - {name: judge_name, type: str}
+      - {name: limit, type: int, default: 50}
+
+  - name: cases_citing_section
+    description: "Judgments that cite a specific section of a given act (e.g. section 302 of the Indian Penal Code)."
+    cypher_template: >
+      MATCH (c:Case)-[r:CITES]->(a:Act)
+      WHERE a.name CONTAINS "{act}" AND r.section = "{section}"
+      RETURN c.title AS case_title, a.name AS act, r.section AS section
+      LIMIT {limit}
+    parameters:
+      - {name: act, type: str}
+      - {name: section, type: str}
+      - {name: limit, type: int, default: 50}
+
+  - name: parties_in_case
+    description: "The parties (with roles) involved in judgments matching a title fragment."
+    cypher_template: >
+      MATCH (p:Party)-[pi:PARTY_IN]->(c:Case)
+      WHERE c.title CONTAINS "{title}"
+      RETURN c.title AS case_title, p.name AS party, pi.role AS role
+      LIMIT {limit}
+    parameters:
+      - {name: title, type: str}
+      - {name: limit, type: int, default: 50}
+
+  - name: judge_topic_focus
+    description: "The topic categories a judge most often decides on — their subject-matter focus."
+    cypher_template: >
+      MATCH (j:Judge)-[:DECIDED]->(c:Case)-[:ABOUT]->(t:Topic)
+      WHERE j.name CONTAINS "{judge_name}"
+      RETURN t.category AS category, count(DISTINCT c) AS cases
+      ORDER BY cases DESC
+      LIMIT {limit}
+    parameters:
+      - {name: judge_name, type: str}
+      - {name: limit, type: int, default: 20}
