@@ -53,6 +53,13 @@ def main(argv: list[str] | None = None) -> None:
     from samyama import SamyamaClient
 
     if args.url:
+        # --data-dir/--limit/--embed only apply to embedded loading; warn if set with --url.
+        if args.limit is not None or args.embed:
+            print(
+                "Warning: --limit/--embed are ignored with --url (data must already be "
+                "loaded on the remote server).",
+                file=sys.stderr,
+            )
         client = SamyamaClient.connect(args.url)
     else:
         client = SamyamaClient.embedded()

@@ -19,7 +19,7 @@ RETURN a.name AS act, r.section AS section, count(DISTINCT c) AS cases
 ORDER BY cases DESC LIMIT 5
 ```
 
-| Act | Section | Judgments |
+| Act | Section | Cases |
 |-----|---------|-----------|
 | **Indian Penal Code** | **302** (murder) | **57** |
 | Constitution of India | Article 32 | 36 |
@@ -58,23 +58,7 @@ The cited **`section` lives on the `CITES` edge**, so section-level questions ("
 
 ## Quick Start
 
-### Load from snapshot (recommended)
-
-```bash
-# Download the snapshot (144 KB)   [pending upload to a kg-snapshots release]
-curl -LO https://github.com/samyama-ai/samyama-graph/releases/download/kg-snapshots-v8/legal-judgments.sgsnap
-# sha256: b93e77666a87683f0fb84b68eeedbba21f03ec3f5fd725dbd3ed6d4979633190
-
-# Start Samyama and import into the legal-judgments tenant
-./target/release/samyama
-curl -X POST http://localhost:8080/api/tenants \
-  -H 'Content-Type: application/json' \
-  -d '{"id":"legal-judgments","name":"Legal Judgments KG"}'
-curl -X POST http://localhost:8080/api/tenants/legal-judgments/snapshot/import \
-  -F "file=@legal-judgments.sgsnap"
-```
-
-### Build from source
+### Build from source (recommended)
 
 ```bash
 git clone https://git.samyama.ai/Samyama.ai/legal-judgments-graph-kg.git && cd legal-judgments-graph-kg
@@ -86,6 +70,25 @@ python -m etl.loader --data-dir data # build + load the graph (4,462 nodes / 8,3
 python -m etl.loader --data-dir data --embed   # ...also embed case summaries for semantic search
 python -m mcp_server.server --data-dir data    # expose the KG over MCP
 pytest                               # run tests
+```
+
+### Load from snapshot (coming soon)
+
+> ⚠️ The pre-built `.sgsnap` release asset is **not published yet** — use **Build from source** above.
+> Once the snapshot is released, the commands below will import the whole graph in seconds:
+
+```bash
+# Download the snapshot (144 KB)   [release asset pending — this URL is not live yet]
+curl -LO https://github.com/samyama-ai/samyama-graph/releases/download/kg-snapshots-v8/legal-judgments.sgsnap
+# sha256: b93e77666a87683f0fb84b68eeedbba21f03ec3f5fd725dbd3ed6d4979633190
+
+# Start Samyama and import into the legal-judgments tenant
+./target/release/samyama
+curl -X POST http://localhost:8080/api/tenants \
+  -H 'Content-Type: application/json' \
+  -d '{"id":"legal-judgments","name":"Legal Judgments KG"}'
+curl -X POST http://localhost:8080/api/tenants/legal-judgments/snapshot/import \
+  -F "file=@legal-judgments.sgsnap"
 ```
 
 ## Example Queries

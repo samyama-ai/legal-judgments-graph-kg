@@ -62,9 +62,11 @@ custom_tools:
     description: "The Court's docket broken down by topic category — where the judgments concentrate."
     cypher_template: >
       MATCH (c:Case)-[:ABOUT]->(t:Topic)
-      RETURN t.category AS category, count(*) AS mentions
-      ORDER BY mentions DESC
-    parameters: []
+      RETURN t.category AS category, count(DISTINCT c) AS cases, count(*) AS mentions
+      ORDER BY cases DESC
+      LIMIT {limit}
+    parameters:
+      - {name: limit, type: int, default: 20}
 
   - name: cases_by_judge
     description: "All judgments authored by a specific judge (most recent first)."
@@ -106,7 +108,7 @@ custom_tools:
     cypher_template: >
       MATCH (j:Judge)-[:DECIDED]->(c:Case)-[:ABOUT]->(t:Topic)
       WHERE j.name CONTAINS "{judge_name}"
-      RETURN t.category AS category, count(*) AS cases
+      RETURN t.category AS category, count(DISTINCT c) AS cases
       ORDER BY cases DESC
       LIMIT {limit}
     parameters:

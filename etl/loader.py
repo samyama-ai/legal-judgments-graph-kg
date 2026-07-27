@@ -69,8 +69,8 @@ def load_legal_judgments(
     for label, prop in indexes:
         try:
             client.query(f"CREATE INDEX ON :{label}({prop})", GRAPH)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"  [index] skipped :{label}({prop}) — {e}", flush=True)
     print(f"Created {len(indexes)} indexes", flush=True)
 
     t0 = time.time()
@@ -94,7 +94,7 @@ def load_legal_judgments(
     counts["topics"] = len(topics)
 
     cases = read_csv(d / "cases.csv")
-    if limit:
+    if limit is not None:          # honor --limit 0 (load 0 cases) instead of treating 0 as "all"
         cases = cases[:limit]
     keep = {r["id"] for r in cases}          # case ids we actually loaded
     batch_create_nodes(client, [

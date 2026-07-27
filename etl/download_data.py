@@ -29,13 +29,24 @@ RETRIES = 3
 
 
 def _get(url: str) -> bytes:
-    """Fetch a URL, retrying with backoff on transient network/HTTP errors."""
+    """Fetch a URL, retrying with backoff on transient errors.
+
+    A 4xx (client error, e.g. 404) is permanent, so it is raised immediately and not
+    retried; only 5xx, connection and timeout errors are retried (429 is treated as
+    transient too).
+    """
     req = urllib.request.Request(url, headers={"User-Agent": "legal-judgments-graph-kg"})
     last = None
     for attempt in range(1, RETRIES + 1):
         try:
             with urllib.request.urlopen(req, timeout=60) as r:
                 return r.read()
+        except urllib.error.HTTPError as e:
+            if 400 <= e.code < 500 and e.code != 429:
+                raise RuntimeError(f"fetch {url} failed permanently: HTTP {e.code}") from e
+            last = e
+            if attempt < RETRIES:
+                time.sleep(2 * attempt)
         except (urllib.error.URLError, TimeoutError) as e:
             last = e
             if attempt < RETRIES:
@@ -127,11 +138,18 @@ def _write_csvs(records: list[dict], out: Path) -> None:
                     seen_abo.add(tx)
                     e_abo.append([cid, tx])
 
+    def _safe(cell):
+        # Neutralize CSV formula injection: a leading =,+,-,@ (or tab/CR) can execute
+        # in spreadsheet apps. Prefix such text cells with a single quote.
+        if isinstance(cell, str) and cell[:1] in ("=", "+", "-", "@", "\t", "\r"):
+            return "'" + cell
+        return cell
+
     def w(name, header, rows):
         with (out / name).open("w", newline="", encoding="utf-8") as f:
             wr = csv.writer(f)
             wr.writerow(header)
-            wr.writerows(rows)
+            wr.writerows([[_safe(c) for c in row] for row in rows])
 
     w("cases.csv", ["id", "title", "year", "month"], cases)
     w("judges.csv", ["name"], [[x] for x in sorted(judges)])
