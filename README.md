@@ -31,6 +31,19 @@ ORDER BY cases DESC LIMIT 5
 
 ---
 
+## Documentation
+
+New here? Start with the guides:
+
+| Guide | What it covers |
+|-------|----------------|
+| **[GETTING_STARTED.md](GETTING_STARTED.md)** | prerequisites (Python ≥ 3.10) · install · run the engine (Docker) · load the graph · first query |
+| **[docs/QUERYING.md](docs/QUERYING.md)** | ask questions via **MCP (Claude)**, the **HTTP API**, or the **Samyama CLI** |
+| [docs/schema.md](docs/schema.md) | node & edge model |
+| [docs/100-queries.md](docs/100-queries.md) | 100 example Cypher queries |
+
+---
+
 ## Schema
 
 **5 node labels** — Topic (2,291), Party (1,102), Case (589), Act (446), Judge (34)
@@ -58,41 +71,19 @@ The cited **`section` lives on the `CITES` edge**, so section-level questions ("
 
 ## Quick Start
 
-### Build from source (recommended)
+**Full walkthrough → [GETTING_STARTED.md](GETTING_STARTED.md)** (prerequisites, Docker, loading, querying).
+
+Fastest path — build the graph locally (**Python ≥ 3.10**):
 
 ```bash
-git clone https://git.samyama.ai/Samyama.ai/legal-judgments-graph-kg.git && cd legal-judgments-graph-kg
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-
-python -m etl.download_data          # fetch 589 JSONs from HuggingFace -> 9 CSVs in ./data
-python -m etl.loader --data-dir data # build + load the graph (4,462 nodes / 8,363 edges)
-python -m mcp_server.server --data-dir data    # expose the KG over MCP
-pytest                               # run tests
-
-# Optional: semantic-search embeddings (installs torch via the [embed] extra)
-pip install -e ".[embed]"
-python -m etl.loader --data-dir data --embed   # ...also embed case summaries for vector search
+python -m venv .venv && source .venv/bin/activate     # Python >= 3.10
+pip install -r requirements.txt
+python -m etl.download_data           # 589 judgments → 9 CSVs in ./data
+python -m etl.loader --data-dir data  # build + load: 4,462 nodes / 8,363 edges (embedded, no engine)
 ```
 
-### Load from snapshot (coming soon)
-
-> ⚠️ The pre-built `.sgsnap` release asset is **not published yet** — use **Build from source** above.
-> Once the snapshot is released, the commands below will import the whole graph in seconds:
-
-```bash
-# Download the snapshot (144 KB)   [release asset pending — this URL is not live yet]
-curl -LO https://github.com/samyama-ai/samyama-graph/releases/download/kg-snapshots-v8/legal-judgments.sgsnap
-# sha256: b93e77666a87683f0fb84b68eeedbba21f03ec3f5fd725dbd3ed6d4979633190
-
-# Start Samyama and import into the legal-judgments tenant
-./target/release/samyama
-curl -X POST http://localhost:8080/api/tenants \
-  -H 'Content-Type: application/json' \
-  -d '{"id":"legal-judgments","name":"Legal Judgments KG"}'
-curl -X POST http://localhost:8080/api/tenants/legal-judgments/snapshot/import \
-  -F "file=@legal-judgments.sgsnap"
-```
+To query it from **Claude / HTTP / CLI**, serve it on a running engine — see
+[GETTING_STARTED.md](GETTING_STARTED.md) §4 and [docs/QUERYING.md](docs/QUERYING.md).
 
 ## Example Queries
 
