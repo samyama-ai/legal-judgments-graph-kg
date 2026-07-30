@@ -47,6 +47,10 @@ def main(argv: list[str] | None = None) -> None:
         help="Print discovered tools and exit.",
     )
     parser.add_argument("--name", default="Legal Judgments KG", help="MCP server name.")
+    parser.add_argument(
+        "--graph", default="legal-judgments",
+        help="Graph/tenant to serve (default: %(default)s; matches etl.helpers.GRAPH).",
+    )
 
     args = parser.parse_args(argv)
 
@@ -71,7 +75,7 @@ def main(argv: list[str] | None = None) -> None:
     from samyama_mcp.server import SamyamaMCPServer
 
     config = ToolConfig.from_yaml(config_path)
-    server = SamyamaMCPServer(client, server_name=args.name, config=config)
+    server = SamyamaMCPServer(client, graph=args.graph, server_name=args.name, config=config)
 
     if args.list_tools:
         tools = server.list_tools()
