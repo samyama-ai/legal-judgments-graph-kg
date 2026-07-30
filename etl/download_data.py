@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import http.client
 import json
 import time
 import urllib.error
@@ -48,7 +49,10 @@ def _get(url: str) -> bytes:
             last = e
             if attempt < RETRIES:
                 time.sleep(2 * attempt)
-        except (urllib.error.URLError, TimeoutError) as e:
+        except (urllib.error.URLError, TimeoutError, ConnectionError,
+                http.client.HTTPException) as e:
+            # Covers connection resets / drops (e.g. http.client.RemoteDisconnected) and
+            # protocol errors, which HuggingFace can throw when rate-limiting rapid requests.
             last = e
             if attempt < RETRIES:
                 time.sleep(2 * attempt)
@@ -81,6 +85,7 @@ def download_all(out: str = "data") -> None:
             records.append(json.loads(_get(f"{RESOLVE}/{p}")))
         except (RuntimeError, json.JSONDecodeError) as e:
             print(f"[download]   WARN skipping {p}: {e}")
+        time.sleep(0.05)   # gentle throttle — avoid HuggingFace dropping rapid back-to-back requests
         if i % 50 == 0 or i == len(paths):
             print(f"[download]   {i}/{len(paths)}")
 
