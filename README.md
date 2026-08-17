@@ -6,6 +6,20 @@
 > This repo holds the loader and source-data specifics for the KG.
 
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-blue" alt="License"></a>
+<a href="https://huggingface.co/datasets/VaidhyaMegha/legal-judgments-kg"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20dataset-VaidhyaMegha%2Flegal--judgments--kg-yellow" alt="HuggingFace dataset"></a>
+
+**The built graph is published as a dataset** — you do not have to run the ETL to get it:
+**[huggingface.co/datasets/VaidhyaMegha/legal-judgments-kg](https://huggingface.co/datasets/VaidhyaMegha/legal-judgments-kg)**
+(`v1.0`, CC-BY-4.0). The 9 node/edge CSVs plus `legal-judgments.sgsnap`. This repository holds
+the **code**; that dataset holds the **data**; the snapshot is the **graph**.
+
+```python
+from datasets import load_dataset
+cases = load_dataset("VaidhyaMegha/legal-judgments-kg", "case", revision="v1.0")
+```
+
+> **Using the data means crediting the source.** CC-BY-4.0 makes attribution a condition of
+> use, and it travels to anything you redistribute or build on top of.
 
 ---
 
@@ -138,11 +152,24 @@ pyproject.toml
 
 | | |
 |---|---|
+| **Published graph dataset** | **[huggingface.co/datasets/VaidhyaMegha/legal-judgments-kg](https://huggingface.co/datasets/VaidhyaMegha/legal-judgments-kg)** |
 | Samyama Graph | [github.com/samyama-ai/samyama-graph](https://github.com/samyama-ai/samyama-graph) |
 | Case study (engine repo) | [case_studies/legal-judgments](https://github.com/samyama-ai/samyama-graph/tree/main/case_studies/legal-judgments) |
-| Dataset | [huggingface.co/datasets/Shreyasrao/…-2016](https://huggingface.co/datasets/Shreyasrao/Indian-law-supreme-court-judgements-2016) |
+| Source dataset (input to the ETL) | [huggingface.co/datasets/Shreyasrao/…-2016](https://huggingface.co/datasets/Shreyasrao/Indian-law-supreme-court-judgements-2016) |
+| Original source | [registry.opendata.aws/indian-supreme-court-judgments](https://registry.opendata.aws/indian-supreme-court-judgments/) |
 | Contact | [samyama.dev/contact](https://samyama.dev/contact) |
 
 ## License
 
-Apache 2.0. Source data is CC-BY-4.0 (Indian Supreme Court Judgments via AWS Open Data / Dattam Labs).
+Apache 2.0 covers the **code** in this repository. The **data** is a separate matter: the
+Indian Supreme Court Judgments corpus is **[CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)**
+(curated by Dattam Labs, via the [AWS Open Data Registry](https://registry.opendata.aws/indian-supreme-court-judgments/)),
+and CC-BY-4.0 — not Apache 2.0 — governs the
+[published dataset](https://huggingface.co/datasets/VaidhyaMegha/legal-judgments-kg) and any
+redistribution of it.
+
+**Attribution is required.** Anything built on this data must carry:
+
+> Indian Supreme Court Judgments, curated by Dattam Labs, accessed from the
+> [AWS Open Data Registry](https://registry.opendata.aws/indian-supreme-court-judgments/).
+> Licensed [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/).
